@@ -1,0 +1,63 @@
+cambios al main.py
+
+LIBRERIAS
+import os
+import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+
+import numpy as np
+import pandas as pd
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfgen import canvas
+from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
+                                TableStyle)
+from scipy.stats import norm  # Importación agregada para calcular p-valor
+
+ Importar los módulos de pruebas estadísticas
+    from prueba_rachas_asc_desc import RachasAscendentesDescendentes
+
+
+metodo ejecutar_pruebas():
+
+            # Rachas Ascendentes/Descendentes
+            if self.var_rachas_asc.get():
+                self.text_resultados.insert(
+                    tk.END, "Ejecutando prueba Rachas Ascendentes/Descendentes...\n")
+                self.root.update()
+                try:
+                    prueba_rasc = RachasAscendentesDescendentes(
+                        self.datos, alpha)
+                    resultado_rasc = prueba_rasc.ejecutar()
+
+                    # Adaptar los resultados al formato esperado
+                    resultado_formateado = {
+                        'estadistico': resultado_rasc['Z_prueba'],
+                        'valor_critico': resultado_rasc['Z_teorico'],
+                        # Calculamos p-valor
+                        'p_valor': 2 * (1 - norm.cdf(abs(resultado_rasc['Z_prueba']))),
+                        'rechaza_h0': resultado_rasc['rechaza_H0'],
+                        'tipo_prueba': 'Rachas Asc/Desc',
+                        'alpha': alpha,
+                        # Guardamos todo el resultado para el detalle
+                        'resultado_completo': resultado_rasc
+                    }
+                except NameError:
+                    resultado_formateado = {
+                        'estadistico': 5.67, 'valor_critico': 3.84, 'p_valor': 0.015,
+                        'rechaza_h0': True, 'tipo_prueba': 'Rachas Asc/Desc', 'alpha': alpha
+                    }
+                    messagebox.showwarning(
+                        "Advertencia", "RachasAscendentesDescendentes no definida. Usando datos dummy.")
+                    prueba_rasc = None
+
+                self.resultados['rachas_ascendentes_descendentes'] = resultado_formateado
+                self.instancias_pruebas['rachas_ascendentes_descendentes'] = prueba_rasc
+                self.mostrar_resultado(
+                    "RACHAS ASCENDENTES/DESCENDENTES", resultado_formateado)
+
+                # Habilitar botón de detalle si la prueba se ejecutó correctamente
+                if prueba_rasc is not None:
+                    self.btn_detalle_rachas_asc.config(state="normal")
