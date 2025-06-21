@@ -14,11 +14,9 @@ import sys
 try:
     from chi_cuadrado import PruebaChi
     from kolmogorov_smornov import PruebaKS
-    from  rachas_ascendentes_decendentes import RachasAscendentesDescendentes
-    from rachas_encima_debajo import RachasEncimaDebajo
-    # Assuming LongitudRachas is a separate file or within one of the above, if not, it will cause an error
-    # For now, I'll comment it out to prevent import errors if it's missing, or assume it's available.
-    # from longitud_rachas import LongitudRachas
+    #from  rachas_ascendentes_decendentes import RachasAscendentesDescendentes
+    #from rachas_encima_debajo import RachasEncimaDebajo
+    from longitud_rachas_encima_debajo import LongitudRachasEncimaDebajo 
 except ImportError as e:
     print(f"Error importando módulos: {e}")
     print("Asegúrate de que todos los módulos estén en el mismo directorio")
@@ -92,10 +90,10 @@ class InterfazPrincipal:
         ttk.Checkbutton(frame_pruebas, text="Rachas Encima/Debajo", 
                        variable=self.var_rachas_enc).grid(row=1, column=1, sticky=tk.W)
         # Assuming LongitudRachas is available, otherwise comment these out
-        # ttk.Checkbutton(frame_pruebas, text="Longitud Rachas Asc/Desc", 
-        #                variable=self.var_long_asc).grid(row=2, column=0, sticky=tk.W)
-        # ttk.Checkbutton(frame_pruebas, text="Longitud Rachas Enc/Deb", 
-        #                variable=self.var_long_enc).grid(row=2, column=1, sticky=tk.W)
+        ttk.Checkbutton(frame_pruebas, text="Longitud Rachas Asc/Desc", 
+                        variable=self.var_long_asc).grid(row=2, column=0, sticky=tk.W)
+        ttk.Checkbutton(frame_pruebas, text="Longitud Rachas Enc/Deb", 
+                        variable=self.var_long_enc).grid(row=2, column=1, sticky=tk.W)
         
         # Parámetros
         frame_params = ttk.LabelFrame(main_frame, text="Parámetros", padding="10")
@@ -159,13 +157,13 @@ class InterfazPrincipal:
         self.btn_detalle_rachas_enc.grid(row=1, column=1, padx=5, pady=2, sticky=tk.W)
 
         # Assuming LongitudRachas is available, otherwise comment these out
-        # self.btn_detalle_long_asc = ttk.Button(self.frame_resultados_detalles, text="Detalle Longitud Rachas Asc/Desc", 
+        #self.btn_detalle_long_asc = ttk.Button(self.frame_resultados_detalles, text="Detalle Longitud Rachas Asc/Desc", 
         #                                       command=self.mostrar_detalle_long_asc, state="disabled")
-        # self.btn_detalle_long_asc.grid(row=2, column=0, padx=5, pady=2, sticky=tk.W)
+        #self.btn_detalle_long_asc.grid(row=2, column=0, padx=5, pady=2, sticky=tk.W)
 
-        # self.btn_detalle_long_enc = ttk.Button(self.frame_resultados_detalles, text="Detalle Longitud Rachas Enc/Deb", 
-        #                                       command=self.mostrar_detalle_long_enc, state="disabled")
-        # self.btn_detalle_long_enc.grid(row=2, column=1, padx=5, pady=2, sticky=tk.W)
+        self.btn_detalle_long_enc = ttk.Button(self.frame_resultados_detalles, text="Detalle Longitud Rachas Enc/Deb", 
+                                               command=self.mostrar_detalle_long_enc, state="disabled")
+        self.btn_detalle_long_enc.grid(row=2, column=1, padx=5, pady=2, sticky=tk.W)
 
         # Configurar weights para redimensionamiento
         self.root.columnconfigure(0, weight=1)
@@ -223,8 +221,8 @@ class InterfazPrincipal:
                 self.btn_detalle_ks.config(state="disabled")
                 self.btn_detalle_rachas_asc.config(state="disabled")
                 self.btn_detalle_rachas_enc.config(state="disabled")
-                # self.btn_detalle_long_asc.config(state="disabled") # Commented if LongitudRachas not used
-                # self.btn_detalle_long_enc.config(state="disabled") # Commented if LongitudRachas not used
+                #self.btn_detalle_long_asc.config(state="disabled") # Commented if LongitudRachas not used
+                self.btn_detalle_long_enc.config(state="disabled") # Commented if LongitudRachas not used
 
             except Exception as e:
                 messagebox.showerror("Error", f"Error al cargar el archivo: {str(e)}")
@@ -289,7 +287,7 @@ class InterfazPrincipal:
         self.btn_detalle_rachas_asc.config(state="disabled")
         self.btn_detalle_rachas_enc.config(state="disabled")
         # self.btn_detalle_long_asc.config(state="disabled")
-        # self.btn_detalle_long_enc.config(state="disabled")
+        self.btn_detalle_long_enc.config(state="disabled")
         
         alpha = self.var_alpha.get()
         intervalos = self.var_intervalos.get()
@@ -390,27 +388,20 @@ class InterfazPrincipal:
             #     if 'prueba_long_asc' in locals():
             #         self.btn_detalle_long_asc.config(state="normal")
             
-            # Longitud Rachas Encima/Debajo (commented out if LongitudRachas not used)
-            # if self.var_long_enc.get():
-            #     self.text_resultados.insert(tk.END, "Ejecutando prueba Longitud Rachas Enc/Deb...\n")
-            #     self.root.update()
-            #     try:
-            #         prueba_long_enc = LongitudRachas(self.datos, alpha, tipo='encima_debajo')
-            #         resultado_long_enc = prueba_long_enc.ejecutar()
-            #     except NameError:
-            #         resultado_long_enc = {
-            #             'estadistico': 0.8, 'valor_critico': 0.7, 'p_valor': 0.03,
-            #             'rechaza_h0': True, 'tipo_prueba': 'Long Rachas Enc', 'alpha': alpha
-            #         }
-            #         messagebox.showwarning("Advertencia", "LongitudRachas no definida. Usando datos dummy.")
-            #     self.resultados['longitud_rachas_enc'] = resultado_long_enc
-            #     self.instancias_pruebas['longitud_rachas_enc'] = prueba_long_enc if 'prueba_long_enc' in locals() else None
-            #     self.mostrar_resultado("LONGITUD RACHAS ENCIMA/DEBAJO", resultado_long_enc)
-            #     if 'prueba_long_enc' in locals():
-            #         self.btn_detalle_long_enc.config(state="normal")
+           # Longitud Rachas Encima/Debajo
+            if self.var_long_enc.get():
+                self.text_resultados.insert(tk.END, "Ejecutando prueba Longitud Rachas Encima/Debajo...\n")
+                self.root.update()
+                prueba_long_enc = LongitudRachasEncimaDebajo(self.datos, alpha)
+                resultado_long_enc = prueba_long_enc.ejecutar()
+
+                self.resultados['longitud_rachas_enc'] = resultado_long_enc
+                self.instancias_pruebas['longitud_rachas_enc'] = prueba_long_enc
+                self.mostrar_resultado("LONGITUD RACHAS ENCIMA/DEBAJO", resultado_long_enc)
+                self.btn_detalle_long_enc.config(state="normal")
             
-            self.text_resultados.insert(tk.END, "\n" + "=" * 50 + "\n")
-            self.text_resultados.insert(tk.END, "TODAS LAS PRUEBAS COMPLETADAS\n")
+                self.text_resultados.insert(tk.END, "\n" + "=" * 50 + "\n")
+                self.text_resultados.insert(tk.END, "TODAS LAS PRUEBAS COMPLETADAS\n")
             
             # Habilitar botón de PDF
             self.btn_generar_pdf.config(state="normal")
@@ -491,14 +482,14 @@ class InterfazPrincipal:
     #     else:
     #         messagebox.showinfo("Información", "La prueba de Longitud Rachas Ascendentes/Descendentes no ha sido ejecutada o no se pudo cargar.")
 
-    # def mostrar_detalle_long_enc(self):
-    #     if 'longitud_rachas_enc' in self.instancias_pruebas and self.instancias_pruebas['longitud_rachas_enc'] is not None:
-    #         try:
-    #             self.instancias_pruebas['longitud_rachas_enc'].mostrar_tabla_detallada(parent=self.root)
-    #         except AttributeError:
-    #             messagebox.showerror("Error", "La clase LongitudRachas no tiene el método 'mostrar_tabla_detallada'.")
-    #     else:
-    #         messagebox.showinfo("Información", "La prueba de Longitud Rachas Encima/Debajo no ha sido ejecutada o no se pudo cargar.")
+    def mostrar_detalle_long_enc(self):
+        if 'longitud_rachas_enc' in self.instancias_pruebas and self.instancias_pruebas['longitud_rachas_enc'] is not None:
+            try:
+                self.instancias_pruebas['longitud_rachas_enc'].mostrar_tabla_detallada(parent=self.root)
+            except AttributeError:
+                messagebox.showerror("Error", "La clase LongitudRachasEncimaDebajo no tiene el método 'mostrar_tabla_detallada'.")
+        else:
+            messagebox.showinfo("Información", "La prueba de Longitud Rachas Encima/Debajo no ha sido ejecutada o no se pudo cargar.")
 
     def generar_pdf(self):
         """Generar reporte PDF con los resultados"""

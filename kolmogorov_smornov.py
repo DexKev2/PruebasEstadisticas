@@ -24,26 +24,29 @@ class PruebaKS:
         }
     
     def calcular_frecuencias_acumuladas(self):
-        """Calcular frecuencias acumuladas observadas y teóricas"""
-        datos_ordenados = np.sort(self.datos)
+        """Calcular frecuencias acumuladas observadas y teóricas en [0, 1)"""
 
-        min_val = np.min(self.datos)
-        max_val = np.max(self.datos)
-        
-        # Crear límites con pequeño epsilon para mantener exclusión del límite superior
-        limites = np.linspace(min_val, max_val + 1e-10, self.num_intervalos + 1)
+        # Asegurarse de que los datos estén en el rango [0, 1)
+        datos_normalizados = self.datos[(self.datos >= 0) & (self.datos < 1.0)]
 
-        # Calcular frecuencias observadas en los intervalos [a, b)
-        freq_obs, _ = np.histogram(self.datos, bins=limites)
+        # Crear límites uniformes en [0, 1)
+        step = 1 / self.num_intervalos
+        limites = np.arange(0, 1 + 1e-10, step)  # Agrega epsilon para incluir el último límite
 
-        # Frecuencia acumulada observada (proporción)
-        freq_acum_obs = np.cumsum(freq_obs) / self.n
+        # Calcular frecuencias observadas
+        freq_obs, _ = np.histogram(datos_normalizados, bins=limites)
 
-        # Evaluar la acumulada teórica en los límites superiores de cada intervalo
-        limites_superiores = limites[1:]  # Los bordes derechos
-        freq_acum_teorica = (limites_superiores - min_val) / (max_val - min_val)
+        # Calcular frecuencia acumulada observada (proporción)
+        freq_acum_obs = np.cumsum(freq_obs) / self.n  # Usa self.n si quieres mantener proporción respecto al total original
+
+        # Límites superiores de cada intervalo
+        limites_superiores = limites[1:]
+
+        # Calcular frecuencia acumulada teórica en cada límite superior (F(x) = x)
+        freq_acum_teorica = limites_superiores  # En uniforme sobre [0, 1), F(x) = x
 
         return limites, freq_obs, freq_acum_obs, freq_acum_teorica, limites_superiores
+
 
     
     def calcular_estadistico_ks(self):
@@ -133,7 +136,7 @@ class PruebaKS:
         titulo.grid(row=0, column=0, columnspan=2, pady=10)
         
         # Crear tabla
-        columns = ('Intervalo', 'Límite Inf', 'Límite Sup', 'Punto Medio', 'Fi', 'Fi Acum Obs', 'Fi Acum Teór', '|Diferencia|')
+        columns = ('Intervalo', 'Límite Inf', 'Límite Sup', 'Punto Medio', 'Fi', 'Sn(X)', 'Fx(X)', '|Diferencia|')
         tree = ttk.Treeview(main_frame, columns=columns, show='headings', height=12)
         
         # Definir encabezados y anchos

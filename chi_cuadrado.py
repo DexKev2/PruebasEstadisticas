@@ -28,17 +28,17 @@ class PruebaChi:
         }
         
     def calcular_intervalos(self):
-        """Calcular intervalos y frecuencias observadas"""
-        min_val = np.min(self.datos)
-        max_val = np.max(self.datos)
+        """Dividir el intervalo [0, 1) en num_intervalos iguales sin incluir el extremo derecho"""
 
-        limites = np.linspace(min_val, max_val, self.num_intervalos + 1)
+        # Dividir [0, 1) en num_intervalos con np.linspace excluyendo el 1.0
+        step = 1 / self.num_intervalos
+        limites = np.arange(0, 1 + 1e-10, step)  # Agrega un epsilon para asegurar inclusión final en np.histogram
 
-        # Eliminar el valor máximo si es exactamente igual al último límite
-        datos_filtrados = self.datos[self.datos < limites[-1]]
-
+        # Frecuencias observadas (solo cuenta valores >= lim_inf y < lim_sup)
+        datos_filtrados = self.datos[self.datos < 1.0]  # Evitar que 1.0 entre al último intervalo
         freq_observadas, _ = np.histogram(datos_filtrados, bins=limites)
 
+        # Frecuencia esperada uniforme
         freq_esperada = self.n / self.num_intervalos
 
         return limites, freq_observadas, freq_esperada
