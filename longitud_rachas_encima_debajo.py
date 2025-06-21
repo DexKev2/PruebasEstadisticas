@@ -14,7 +14,7 @@ class LongitudRachasEncimaDebajo:
     observadas (Oi) de rachas de diferentes longitudes con las frecuencias
     esperadas (Ei).
     """
-    def __init__(self, datos, alpha=0.05):
+    def __init__(self, datos, alpha):
         """
         Inicializa la prueba.
         :param datos: Una lista o array de números.
@@ -27,12 +27,13 @@ class LongitudRachasEncimaDebajo:
         if self.n_total == 0:
             raise ValueError("El conjunto de datos no puede estar vacío.")
 
-        self.media = np.mean(self.datos)
+        # --- MODIFICACIÓN CLAVE AQUÍ: Usar 0.5 como umbral en lugar de la media ---
+        self.umbral = 0.5 # Definimos el umbral como 0.5
         
-        # Generar secuencia de '+' y '-'
-        self.secuencia = ['+' if dato > self.media else '-' for dato in self.datos]
+        # Generar secuencia de '+' y '-' basada en el umbral
+        self.secuencia = ['+' if dato > self.umbral else '-' for dato in self.datos]
         
-        # Contar n1 (encima de la media) y n2 (debajo de la media)
+        # Contar n1 (encima del umbral) y n2 (debajo del umbral)
         self.n1 = self.secuencia.count('+')
         self.n2 = self.secuencia.count('-')
         self.N = self.n1 + self.n2  # Total de elementos considerados
@@ -65,7 +66,6 @@ class LongitudRachasEncimaDebajo:
 
         # --- Frecuencias Esperadas (Ei) ---
         # Usando la fórmula proporcionada: E(Li) = 2*N * (n1/N)^i * (n2/N)^2
-        # Nota: Esta fórmula es asimétrica y puede no ser estándar. Se usa según lo solicitado.
         expected_counts = {}
         if self.N > 0 and self.n2 > 0:
             for i in range(1, max_len_obs + 1):
@@ -144,10 +144,10 @@ class LongitudRachasEncimaDebajo:
             'valor_critico': valor_critico,
             'p_valor': p_valor,
             'rechaza_h0': rechaza_h0,
-            'tipo_prueba': 'Longitud de Rachas Encima/Debajo',
+            'tipo_prueba': 'Longitud de Rachas Encima/Debajo (Umbral 0.5)', # Actualizado para reflejar el cambio
             'alpha': self.alpha,
             'n_total': self.n_total,
-            'media': self.media,
+            'umbral': self.umbral, # Se agrega el umbral a los resultados
             'n1': self.n1,
             'n2': self.n2,
             'df_original': df,
@@ -166,13 +166,13 @@ class LongitudRachasEncimaDebajo:
             return
 
         ventana = tk.Toplevel(parent) if parent else tk.Tk()
-        ventana.title("Tabla Detallada - Longitud de Rachas Encima/Debajo")
+        ventana.title("Tabla Detallada - Longitud de Rachas Encima/Debajo (Umbral 0.5)") # Actualizado el título
         ventana.geometry("800x600")
 
         main_frame = ttk.Frame(ventana, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        titulo = ttk.Label(main_frame, text="Prueba de Longitud de Rachas", font=("Arial", 14, "bold"))
+        titulo = ttk.Label(main_frame, text="Prueba de Longitud de Rachas (Umbral 0.5)", font=("Arial", 14, "bold")) # Actualizado el título
         titulo.pack(pady=10)
 
         # --- Tabla de frecuencias originales ---
@@ -223,6 +223,7 @@ class LongitudRachasEncimaDebajo:
         ttk.Label(frame_resultados, text=f"Grados de libertad: {resultado['grados_libertad']}").pack(anchor=tk.W)
         ttk.Label(frame_resultados, text=f"Valor crítico (α={self.alpha}): {resultado['valor_critico']:.6f}").pack(anchor=tk.W)
         ttk.Label(frame_resultados, text=f"P-valor: {resultado['p_valor']:.6f}").pack(anchor=tk.W)
+        ttk.Label(frame_resultados, text=f"Umbral utilizado: {resultado['umbral']:.1f}").pack(anchor=tk.W) # Mostrar el umbral
         
         decision_text = "Se RECHAZA H₀ (Los datos no son independientes)" if resultado['rechaza_h0'] else "NO se rechaza H₀ (Los datos son independientes)"
         color = "red" if resultado['rechaza_h0'] else "green"
@@ -232,12 +233,9 @@ class LongitudRachasEncimaDebajo:
 
 def main():
     """Función para probar el módulo independientemente."""
-    # Generar datos de prueba (con algo de autocorrelación para hacerlo interesante)
+    # Generar datos de prueba (por ejemplo, números entre 0 y 1)
     np.random.seed(0)
-    base = np.random.uniform(0, 1, 100)
-    datos_test = [base[0]]
-    for i in range(1, len(base)):
-        datos_test.append(0.7 * datos_test[-1] + 0.3 * base[i])
+    datos_test = np.random.rand(100) # Datos aleatorios entre 0 y 1
 
     alpha = 0.05
     
