@@ -1,0 +1,8 @@
+# requirements.txt
+numpy
+scipy
+pandas
+matplotlib
+statsmodels
+reportlab
+openpyxl

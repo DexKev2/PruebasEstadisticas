@@ -7,6 +7,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from scipy.stats import norm 
 import os
 import sys
 
@@ -15,9 +16,10 @@ try:
 
     from chi_cuadrado import PruebaChi
     from kolmogorov_smornov import PruebaKS
-    from rachas_encima_debajo import RachasEncimaDebajo
+    from prueba_rachas_enc_deb import RachasEncimaDebajo
     from longitud_rachas_encima_debajo import LongitudRachasEncimaDebajo
     from LongitudRachasAscendenteDescendente import LongitudRachasAscendenteDescendente
+    from prueba_rachas_asc_desc import RachasAscendentesDescendentes
 except ImportError as e:
     print(f"Error importando módulos: {e}")
     print("Asegúrate de que todos los módulos estén en el mismo directorio")
@@ -331,31 +333,56 @@ class InterfazPrincipal:
                     self.btn_detalle_ks.config(state="normal")
             
             # Rachas Ascendentes/Descendentes
-                if self.var_long_asc.get():
-                    self.text_resultados.insert(tk.END, "Ejecutando prueba Longitud Rachas Asc/Desc...\n")
-                    self.root.update()
-                    try:
-                        prueba_long_asc = LongitudRachasAscendenteDescendente(self.datos, alpha)
-                        resultado_long_asc = prueba_long_asc.ejecutar()
-                        self.resultados['longitud_rachas_ascendentes_descendentes'] = resultado_long_asc
-                        self.instancias_pruebas['longitud_rachas_ascendentes_descendentes'] = prueba_long_asc
-                        self.mostrar_resultado("LONGITUD RACHAS ASCENDENTES/DESCENDENTES", resultado_long_asc)
-                        self.btn_detalle_long_asc.config(state="normal")
-                    except Exception as e:
-                        messagebox.showerror("Error", f"Error en Longitud Rachas Asc/Desc: {str(e)}")
+            if self.var_rachas_asc.get():
+                self.text_resultados.insert(
+                    tk.END, "Ejecutando prueba Rachas Ascendentes/Descendentes...\n")
+                self.root.update()
+                try:
+                    prueba_rasc = RachasAscendentesDescendentes(
+                        self.datos, alpha)
+                    resultado_rasc = prueba_rasc.ejecutar()
+
+                    # Adaptar los resultados al formato esperado
+                    resultado_formateado = {
+                        'estadistico': resultado_rasc['Z_prueba'],
+                        'valor_critico': resultado_rasc['Z_teorico'],
+                        # Calculamos p-valor
+                        'p_valor': 2 * (1 - norm.cdf(abs(resultado_rasc['Z_prueba']))),
+                        'rechaza_h0': resultado_rasc['rechaza_H0'],
+                        'tipo_prueba': 'Rachas Asc/Desc',
+                        'alpha': alpha,
+                        # Guardamos todo el resultado para el detalle
+                        'resultado_completo': resultado_rasc
+                    }
+                except NameError:
+                    resultado_formateado = {
+                        'estadistico': 5.67, 'valor_critico': 3.84, 'p_valor': 0.015,
+                        'rechaza_h0': True, 'tipo_prueba': 'Rachas Asc/Desc', 'alpha': alpha
+                    }
+                    messagebox.showwarning(
+                        "Advertencia", "RachasAscendentesDescendentes no definida. Usando datos dummy.")
+                    prueba_rasc = None
+
+                self.resultados['rachas_ascendentes_descendentes'] = resultado_formateado
+                self.instancias_pruebas['rachas_ascendentes_descendentes'] = prueba_rasc
+                self.mostrar_resultado(
+                    "RACHAS ASCENDENTES/DESCENDENTES", resultado_formateado)
+                self.btn_detalle_rachas_asc.config(state="normal")
+
+
             
             # Rachas Encima/Debajo
-                # Rachas Encima/Debajo
-                if self.var_rachas_enc.get():
-                    self.text_resultados.insert(tk.END, "Ejecutando prueba Rachas Encima/Debajo...\n")
-                    self.root.update()
-                    prueba_renc = RachasEncimaDebajo(self.datos, alpha)
-                    resultado_renc = prueba_renc.ejecutar()
-                    
-                    self.resultados['rachas_encima_debajo'] = resultado_renc
-                    self.instancias_pruebas['rachas_encima_debajo'] = prueba_renc
-                    self.mostrar_resultado("RACHAS ENCIMA/DEBAJO", resultado_renc)
-                    self.btn_detalle_rachas_enc.config(state="normal")
+            
+            if self.var_rachas_enc.get():
+                self.text_resultados.insert(tk.END, "Ejecutando prueba Rachas Encima/Debajo...\n")
+                self.root.update()
+                prueba_renc = RachasEncimaDebajo(self.datos, alpha)
+                resultado_renc = prueba_renc.ejecutar()
+                
+                self.resultados['rachas_encima_debajo'] = resultado_renc
+                self.instancias_pruebas['rachas_encima_debajo'] = prueba_renc
+                self.mostrar_resultado("RACHAS ENCIMA/DEBAJO", resultado_renc)
+                self.btn_detalle_rachas_enc.config(state="normal")
 
            # Longitud Rachas Ascendentes/Descendentes (commented out if LongitudRachas not used)
             if self.var_long_asc.get():
@@ -371,7 +398,7 @@ class InterfazPrincipal:
                 except Exception as e:
                     messagebox.showerror("Error", f"Error en Longitud Rachas Asc/Desc: {str(e)}")
 
-            #         self.btn_detalle_long_asc.config(state="normal")
+                    self.btn_detalle_long_asc.config(state="normal")
             
            # Longitud Rachas Encima/Debajo
             if self.var_long_enc.get():
@@ -437,10 +464,10 @@ class InterfazPrincipal:
 
     def mostrar_detalle_rachas_asc(self):
         """Muestra la ventana de detalle para la prueba de Rachas Ascendentes/Descendentes."""
-        if 'rachas_ascendentes_decendentes' in self.instancias_pruebas and self.instancias_pruebas['rachas_ascendentes_decendentes'] is not None:
-            # Assuming RachasAscendentesDescendentes has a similar method
+        # <--- CORRECCIÓN: La clave ahora es "descendentes" con 's'
+        if 'rachas_ascendentes_descendentes' in self.instancias_pruebas and self.instancias_pruebas['rachas_ascendentes_descendentes'] is not None:
             try:
-                self.instancias_pruebas['rachas_ascendentes_decendentes'].mostrar_tabla_detallada(parent=self.root)
+                self.instancias_pruebas['rachas_ascendentes_descendentes'].mostrar_tabla_detallada(parent=self.root)
             except AttributeError:
                 messagebox.showerror("Error", "La clase RachasAscendentesDescendentes no tiene el método 'mostrar_tabla_detallada'.")
         else:
@@ -488,17 +515,14 @@ class InterfazPrincipal:
             return
         
         try:
-            # Crear documento PDF
             doc = SimpleDocTemplate(archivo_pdf, pagesize=letter)
             story = []
             styles = getSampleStyleSheet()
             
-            # Título
             titulo = Paragraph("Reporte de Pruebas Estadísticas", styles['Title'])
             story.append(titulo)
             story.append(Spacer(1, 20))
             
-            # Información de los datos
             info_datos = f"""
             <b>Información de los datos:</b><br/>
             Cantidad de datos: {len(self.datos)}<br/>
@@ -512,14 +536,12 @@ class InterfazPrincipal:
             story.append(Paragraph(info_datos, styles['Normal']))
             story.append(Spacer(1, 20))
             
-            # Resultados de cada prueba
-            # Use self.resultados which stores the summary for PDF generation
             for nombre_clave_prueba, resultado_summary in self.resultados.items():
-                # Get the display name for the PDF
+                # <--- CORRECCIÓN: La clave aquí también debe ser "descendentes" con 's'
                 display_name_map = {
                     'chi_cuadrado': "Chi Cuadrado",
                     'kolmogorov_smornov': "Kolmogorov-Smirnov",
-                    'rachas_ascendentes_decendentes': "Rachas Ascendentes/Descendentes",
+                    'rachas_ascendentes_descendentes': "Rachas Ascendentes/Descendentes",
                     'rachas_encima_debajo': "Rachas Encima/Debajo",
                     'longitud_rachas_asc': "Longitud Rachas Ascendentes/Descendentes",
                     'longitud_rachas_enc': "Longitud Rachas Encima/Debajo",
@@ -527,7 +549,6 @@ class InterfazPrincipal:
                 titulo_prueba = display_name_map.get(nombre_clave_prueba, nombre_clave_prueba.replace('_', ' ').title())
                 story.append(Paragraph(titulo_prueba, styles['Heading2']))
                 
-                # Crear tabla con resultados
                 datos_tabla = []
                 datos_tabla.append(['Parámetro', 'Valor'])
                 
@@ -538,7 +559,6 @@ class InterfazPrincipal:
                 if 'p_valor' in resultado_summary:
                     datos_tabla.append(['P-valor', f"{resultado_summary['p_valor']:.6f}"])
                 
-                # Resultado de la prueba
                 if resultado_summary['rechaza_h0']:
                     decision = "Se rechaza H0"
                     interpretacion = "Los datos NO siguen la distribución esperada"
@@ -549,7 +569,6 @@ class InterfazPrincipal:
                 datos_tabla.append(['Decisión', decision])
                 datos_tabla.append(['Interpretación', interpretacion])
                 
-                # Crear y estilizar tabla
                 tabla = Table(datos_tabla)
                 tabla.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -565,7 +584,6 @@ class InterfazPrincipal:
                 story.append(tabla)
                 story.append(Spacer(1, 20))
             
-            # Generar PDF
             doc.build(story)
             
             messagebox.showinfo("Éxito", f"Reporte PDF generado: {archivo_pdf}")

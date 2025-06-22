@@ -75,25 +75,27 @@ class LongitudRachasAscendenteDescendente:
         print(f"Debug: Longitud máxima observada: {max_len_obs}")
         
         total_rachas = len(rachas)
+        N = len(self.secuencia_signos)  # Total de observaciones en la secuencia
+        
         print(f"Debug: Total de rachas: {total_rachas}")
+        print(f"Debug: N (total observaciones): {N}")
         
         if total_rachas > 0:
             for i in range(1, max_len_obs + 1):
                 try:
-                    if i == 1:
-                        prob_li = 1/3
-                    elif i == 2:
-                        prob_li = 1/6
-                    else:
-                        # Fórmula: P(Li = i) = 2/((i+1)!(i+2))
-                        prob_li = 2 / (factorial(i+1) * (i+2))
+                    # Fórmula exacta: E(Li) = 2/((i+3)!) * [N(i² + 3i + 1) - (i³ + 3i² - i - 4)]
+                    # Ejemplo: E(L1) = 2/(1+3)! * [40(1² + 3*1 + 1) - (1³ + 3*1² - 1 - 4)]
                     
-                    ei = total_rachas * prob_li
+                  
+
+                    ei = (2/(factorial(i + 3))) *(N * ((i**2) + (3*i) + 1) - ((i**3) + (3*(i**2)) - i - 4))
+                    
                     expected_counts[i] = ei
-                    print(f"Debug: L={i}, P(L={i})={prob_li:.6f}, E={ei:.6f}")
+                    
+
                     
                 except (ZeroDivisionError, OverflowError) as e:
-                    print(f"Debug: Error calculando probabilidad para i={i}: {e}")
+                    print(f"Debug: Error calculando frecuencia esperada para i={i}: {e}")
                     expected_counts[i] = 0
         
         print(f"Debug: Frecuencias esperadas: {expected_counts}")
