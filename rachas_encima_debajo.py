@@ -1,206 +1,218 @@
-
-import numpy as np
-import pandas as pd
-from scipy import stats
 import tkinter as tk
 from tkinter import ttk
+
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
+import seaborn as sns
+from scipy.stats import norm
 
-class RachasEncimaDebajo:
-    """
-    Realiza la prueba de rachas por encima y por debajo de un umbral (0.5).
-    Esta prueba utiliza un estadístico Z para determinar si el número de rachas
-    observado es significativamente diferente del esperado bajo la hipótesis de independencia.
-    """
-    def __init__(self, datos, alpha):
-        """
-        Inicializa la prueba.
-        :param datos: Una lista o array de números.
-        :param alpha: Nivel de significancia para la prueba.
-        """
-        self.datos = np.array(datos)
+
+class RachasAscendentesDescendentes:
+    def __init__(self, datos, alpha=0.05):
+        self.datos = datos
         self.alpha = alpha
-        self.n_total = len(self.datos)
-        
-        if self.n_total == 0:
-            raise ValueError("El conjunto de datos no puede estar vacío.")
-
-        # Usar 0.5 como umbral
-        self.umbral = 0.5
-        
-        # Generar secuencia de '+' y '-' basada en el umbral
-        self.secuencia = ['+' if dato > self.umbral else '-' for dato in self.datos]
-        
-        # Contar n1 (encima del umbral) y n2 (debajo del umbral)
-        self.n1 = self.secuencia.count('+')
-        self.n2 = self.secuencia.count('-')
-        self.N = self.n1 + self.n2  # Total de elementos considerados
-
-    def _contar_rachas(self):
-        """
-        Cuenta el número total de rachas en la secuencia.
-        Una racha es una secuencia consecutiva del mismo símbolo.
-        """
-        if not self.secuencia:
-            return 0
-        
-        num_rachas = 1
-        for i in range(1, len(self.secuencia)):
-            if self.secuencia[i] != self.secuencia[i-1]:
-                num_rachas += 1
-        
-        return num_rachas
+        self.N = len(datos)
+        self.resultados = {}
 
     def ejecutar(self):
-        """
-        Ejecuta la prueba completa y devuelve los resultados.
-        """
-        # Contar rachas observadas
-        R = self._contar_rachas()
-        
-        if self.N == 0 or self.n1 == 0 or self.n2 == 0:
-            return {
-                'error': 'No se pueden calcular las rachas. Verifique que haya datos tanto por encima como por debajo del umbral.'
-            }
+        # Paso 1: Identificar cambios de dirección
+        direcciones = []
+        for i in range(1, self.N):
+            if self.datos[i] > self.datos[i-1]:
+                direcciones.append(1)  # Ascendente
+            elif self.datos[i] < self.datos[i-1]:
+                direcciones.append(-1)  # Descendente
+            else:
+                # En caso de empate, mantener la dirección anterior
+                if direcciones:
+                    direcciones.append(direcciones[-1])
+                else:
+                    direcciones.append(1)  # Por defecto ascendente
 
-        # Calcular valores esperados según las fórmulas
-        # μR = (2*n1*n2)/(n1+n2) + 1
-        mu_R = (2 * self.n1 * self.n2) / (self.n1 + self.n2) + 1
-        
-        # σR² = [2*n1*n2*(2*n1*n2 - n1 - n2)] / [(n1+n2)²*(n1+n2-1)]
-        numerador = 2 * self.n1 * self.n2 * (2 * self.n1 * self.n2 - self.n1 - self.n2)
-        denominador = (self.n1 + self.n2)**2 * (self.n1 + self.n2 - 1)
-        
-        if denominador == 0:
-            return {
-                'error': 'Error en el cálculo de la varianza. Denominador igual a cero.'
-            }
-        
-        sigma_R_squared = numerador / denominador
-        sigma_R = np.sqrt(sigma_R_squared)
-        
-        # Calcular estadístico Z
-        # Z = abs(R - μR) / σR
-        if sigma_R == 0:
-            return {
-                'error': 'Error en el cálculo del estadístico Z. Desviación estándar igual a cero.'
-            }
-        
-        Z = abs(R - mu_R) / sigma_R
-        
-        # Valor crítico para prueba bilateral
-        valor_critico = stats.norm.ppf(1 - self.alpha/2)
-        
-        # P-valor para prueba bilateral
-        p_valor = 2 * (1 - stats.norm.cdf(abs(Z)))
-        
-        # Decisión
-        rechaza_h0 = Z > valor_critico
+        # Paso 2: Contar rachas (cambios de dirección)
+        if not direcciones:
+            # Si solo hay un dato
+            rachas = []
+            A = 0
+            longitudes = []
+        else:
+            rachas = []
+            racha_actual = [direcciones[0]]
 
-        resultado = {
-            'estadistico': Z,
-            'valor_critico': valor_critico,
-            'p_valor': p_valor,
-            'rechaza_h0': rechaza_h0,
-            'tipo_prueba': 'Rachas Encima/Debajo (Umbral 0.5)',
-            'alpha': self.alpha,
-            'n_total': self.n_total,
-            'umbral': self.umbral,
-            'n1': self.n1,
-            'n2': self.n2,
-            'rachas_observadas': R,
-            'rachas_esperadas': mu_R,
-            'desviacion_estandar': sigma_R,
-            'secuencia': ''.join(self.secuencia[:50]) + ('...' if len(self.secuencia) > 50 else '')  # Primeros 50 para mostrar
+            for i in range(1, len(direcciones)):
+                if direcciones[i] == direcciones[i-1]:
+                    racha_actual.append(direcciones[i])
+                else:
+                    rachas.append(racha_actual)
+                    racha_actual = [direcciones[i]]
+
+            rachas.append(racha_actual)
+
+            # Número de rachas (A) es la cantidad de grupos
+            A = len(rachas)
+            longitudes = [len(r) for r in rachas]
+
+        # Contar frecuencias de longitudes
+        frecuencias = {}
+        for lon in longitudes:
+            frecuencias[lon] = frecuencias.get(lon, 0) + 1
+
+        # Paso 3: Cálculos estadísticos
+        mu_A = (2 * self.N - 1) / 3
+        sigma2_A = (16 * self.N - 29) / 90
+        sigma_A = np.sqrt(sigma2_A)
+        Z_prueba = abs((A - mu_A) / sigma_A)
+        Z_teorico = norm.ppf(1 - self.alpha / 2)
+
+        # Paso 4: Resultado de la prueba
+        rechaza_H0 = Z_prueba > Z_teorico
+
+        # Almacenar resultados
+        self.resultados = {
+            'suma_lon': A,  # ESTE ES EL ESTADÍSTICO A IMPORTANTE
+            'numero_rachas': sum(longitudes) if longitudes else 0,
+            'longitud_maxima': max(longitudes) if longitudes else 0,
+            'frecuencias_longitudes': frecuencias,
+            'rachas': rachas,
+            'mu_A': mu_A,
+            'sigma2_A': sigma2_A,
+            'sigma_A': sigma_A,
+            'Z_prueba': Z_prueba,
+            'Z_teorico': Z_teorico,
+            'rechaza_H0': rechaza_H0,
+            'tipo_prueba': 'Rachas Ascendentes/Descendentes',
+            'alpha': self.alpha
         }
-        
-        return resultado
+
+        return self.resultados
 
     def mostrar_tabla_detallada(self, parent=None):
-        """Muestra una ventana con la tabla detallada de la prueba."""
-        resultado = self.ejecutar()
+        if not self.resultados:
+            self.ejecutar()
 
-        if 'error' in resultado:
-            tk.messagebox.showerror("Error", resultado['error'])
-            return
+        ventana = tk.Toplevel(parent)
+        ventana.title("Detalle de Rachas Ascendentes/Descendentes")
+        ventana.geometry("900x700")
 
-        ventana = tk.Toplevel(parent) if parent else tk.Tk()
-        ventana.title("Tabla Detallada - Rachas Encima/Debajo (Umbral 0.5)")
-        ventana.geometry("700x600")
-
+        # Frame principal
         main_frame = ttk.Frame(ventana, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        titulo = ttk.Label(main_frame, text="Prueba de Rachas Encima/Debajo (Umbral 0.5)", font=("Arial", 14, "bold"))
-        titulo.pack(pady=10)
+        # Resumen estadístico
+        resumen = ttk.LabelFrame(
+            main_frame, text="Resumen Estadístico", padding="10")
+        resumen.pack(fill=tk.X, padx=5, pady=5)
 
-        # --- Información básica ---
-        frame_info = ttk.LabelFrame(main_frame, text="Información Básica", padding="10")
-        frame_info.pack(fill=tk.X, expand=True, pady=5)
-        
-        info_text = f"""
-Umbral utilizado: {resultado['umbral']:.1f}
-Total de datos: {resultado['n_total']}
-Datos por encima del umbral (n₁): {resultado['n1']}
-Datos por debajo del umbral (n₂): {resultado['n2']}
-Secuencia (primeros 50): {resultado['secuencia']}
-        """
-        
-        ttk.Label(frame_info, text=info_text.strip(), font=("Courier", 9)).pack(anchor=tk.W)
+        datos_resumen = [
+            ("Número total de datos", self.N),
+            ("Suma de Longitudes = (A)", self.resultados['suma_lon']),
+            ("Número de rachas", f"{self.resultados['numero_rachas']}"),
+            ("μ_A", f"{self.resultados['mu_A']:.4f}"),
+            ("σ²_A", f"{self.resultados['sigma2_A']:.4f}"),
+            ("σ_A", f"{self.resultados['sigma_A']:.4f}"),
+            ("Z prueba", f"{self.resultados['Z_prueba']:.4f}"),
+            ("Z teórico", f"{self.resultados['Z_teorico']:.4f}"),
+            ("Nivel de significancia", f"{self.alpha}"),
+            ("Resultado", "Rechaza H0 (No aleatorio)" if self.resultados['rechaza_H0']
+                          else "Acepta H0 (Aleatorio)")
+        ]
 
-        # --- Cálculos ---
-        frame_calculos = ttk.LabelFrame(main_frame, text="Cálculos", padding="10")
-        frame_calculos.pack(fill=tk.X, expand=True, pady=5)
-        
-        cols_calc = ('Parámetro', 'Fórmula', 'Valor')
-        tree_calc = ttk.Treeview(frame_calculos, columns=cols_calc, show='headings', height=6)
-        for col in cols_calc:
-            tree_calc.heading(col, text=col)
-            tree_calc.column(col, width=200, anchor='center')
-        
-        # Agregar cálculos paso a paso
-        tree_calc.insert('', 'end', values=('Rachas Observadas (R)', 'Conteo directo', f"{resultado['rachas_observadas']}"))
-        tree_calc.insert('', 'end', values=('Media Esperada (μR)', '(2×n₁×n₂)/(n₁+n₂) + 1', f"{resultado['rachas_esperadas']:.4f}"))
-        tree_calc.insert('', 'end', values=('Desviación Estándar (σR)', '√[2×n₁×n₂×(2×n₁×n₂-n₁-n₂)/((n₁+n₂)²×(n₁+n₂-1))]', f"{resultado['desviacion_estandar']:.4f}"))
-        tree_calc.insert('', 'end', values=('Estadístico Z', '|R - μR| / σR', f"{resultado['estadistico']:.6f}"))
-        tree_calc.insert('', 'end', values=('Valor Crítico', f'Z₁₋α/₂ (α={self.alpha})', f"{resultado['valor_critico']:.6f}"))
-        tree_calc.insert('', 'end', values=('P-valor', '2×(1-Φ(|Z|))', f"{resultado['p_valor']:.6f}"))
-        
-        tree_calc.pack(fill=tk.X, expand=True)
+        for i, (label, valor) in enumerate(datos_resumen):
+            ttk.Label(resumen, text=label, font=("Arial", 10, "bold")).grid(
+                row=i, column=0, sticky=tk.W, padx=5, pady=2)
+            ttk.Label(resumen, text=valor).grid(
+                row=i, column=1, sticky=tk.W, padx=5, pady=2)
 
-        # --- Resultados ---
-        frame_resultados = ttk.LabelFrame(main_frame, text="Resultados Finales", padding="10")
-        frame_resultados.pack(fill=tk.X, expand=True, pady=10)
-        
-        ttk.Label(frame_resultados, text=f"Estadístico Z: {resultado['estadistico']:.6f}").pack(anchor=tk.W)
-        ttk.Label(frame_resultados, text=f"Valor crítico (α={self.alpha}): {resultado['valor_critico']:.6f}").pack(anchor=tk.W)
-        ttk.Label(frame_resultados, text=f"P-valor: {resultado['p_valor']:.6f}").pack(anchor=tk.W)
-        
-        decision_text = "Se RECHAZA H₀ (Los datos no son independientes)" if resultado['rechaza_h0'] else "NO se rechaza H₀ (Los datos son independientes)"
-        color = "red" if resultado['rechaza_h0'] else "green"
-        ttk.Label(frame_resultados, text=f"Decisión: {decision_text}", foreground=color, font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=5)
-        
-        return ventana
+        # Tabla de frecuencias de longitudes
+        frame_frecuencias = ttk.LabelFrame(
+            main_frame, text="Distribución de Longitudes de Rachas", padding="10")
+        frame_frecuencias.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-def main():
-    """Función para probar el módulo independientemente."""
-    # Generar datos de prueba (por ejemplo, números entre 0 y 1)
-    np.random.seed(42)
-    datos_test = np.random.rand(100)  # Datos aleatorios entre 0 y 1
+        # Crear tabla
+        tree = ttk.Treeview(frame_frecuencias, columns=(
+            'Longitud', 'Frecuencia'), show='headings')
+        vsb = ttk.Scrollbar(frame_frecuencias,
+                            orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
 
-    alpha = 0.05
-    
-    # Crear y ejecutar prueba
-    try:
-        prueba = RachasEncimaDebajo(datos_test, alpha=alpha)
-        
-        # Mostrar tabla detallada
-        ventana = prueba.mostrar_tabla_detallada()
-        ventana.mainloop()
+        tree.heading('Longitud', text='Longitud')
+        tree.heading('Frecuencia', text='Frecuencia')
+        tree.column('Longitud', width=75, anchor=tk.CENTER)
+        tree.column('Frecuencia', width=50, anchor=tk.CENTER)
 
-    except Exception as e:
-        print(f"Error al ejecutar la prueba: {e}")
+        # Insertar datos
+        for longitud, freq in self.resultados['frecuencias_longitudes'].items():
+            tree.insert('', tk.END, values=(longitud, freq))
 
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Gráfico de distribución de longitudes
+        try:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            longitudes = list(self.resultados['frecuencias_longitudes'].keys())
+            frecuencias = list(
+                self.resultados['frecuencias_longitudes'].values())
+
+            # Ordenar por longitud para mejor visualización
+            longitudes.sort()
+            frecuencias = [self.resultados['frecuencias_longitudes'][lon]
+                           for lon in longitudes]
+
+            sns.barplot(x=longitudes, y=frecuencias, ax=ax,
+                        palette="viridis", hue=longitudes, legend=False)
+            ax.set_title('Distribución de Longitudes de Rachas')
+            ax.set_xlabel('Longitud de Racha')
+            ax.set_ylabel('Frecuencia')
+            ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+            # Añadir valores encima de las barras
+            for i, v in enumerate(frecuencias):
+                ax.text(i, v + 0.2, str(v), ha='center')
+
+            plt.tight_layout()
+
+            # Integrar gráfico en la interfaz
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            canvas = FigureCanvasTkAgg(fig, master=main_frame)
+            canvas_widget = canvas.get_tk_widget()
+            canvas_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            canvas.draw()
+        except Exception as e:
+            print(f"Error al crear gráfico: {e}")
+
+        ventana.transient(parent)
+        ventana.grab_set()
+        parent.wait_window(ventana)
+
+
+# Ejemplo de uso independiente (para pruebas)
 if __name__ == "__main__":
-    main()
+    # Datos de ejemplo basados en tu archivo
+    datos_ejemplo = np.array([
+        0.811, 0.781, 0.046, 0.376, 0.502, 0.313, 0.318, 0.226,
+        0.468, 0.319, 0.939, 0.547, 0.011, 0.981, 0.684, 0.839,
+        0.047, 0.107, 0.609, 0.131, 0.461, 0.145, 0.208, 0.491,
+        0.321, 0.775, 0.608, 0.342, 0.576, 0.598, 0.493, 0.156,
+        0.344, 0.214, 0.195, 0.883, 0.18, 0.348, 0.285, 0.494
+    ])
+
+    prueba = RachasAscendentesDescendentes(datos_ejemplo, alpha=0.10)
+    resultados = prueba.ejecutar()
+
+    print("Resultados de la prueba de rachas ascendentes/descendentes:")
+    print(f"Número de rachas (A): {resultados['suma_lon']}")
+    print(f"Suma de longitudes: {resultados['numero_rachas']}")
+    print(f"Frecuencias: {resultados['frecuencias_longitudes']}")
+    print(f"μ_A: {resultados['mu_A']:.4f}")
+    print(f"σ²_A: {resultados['sigma2_A']:.4f}")
+    print(f"σ_A: {resultados['sigma_A']:.4f}")
+    print(f"Z prueba: {resultados['Z_prueba']:.4f}")
+    print(f"Z teórico: {resultados['Z_teorico']:.4f}")
+    print(f"Rechaza H0: {'Sí' if resultados['rechaza_H0'] else 'No'}")
+
+    # Mostrar tabla detallada
+    root = tk.Tk()
+    root.withdraw()  # Ocultar ventana principal
+    prueba.mostrar_tabla_detallada(parent=root)
+    root.mainloop()
