@@ -16,10 +16,11 @@ from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
 try:
     from chi_cuadrado import PruebaChi
     from kolmogorov_smornov import PruebaKS
+    from prueba_rachas_enc_deb import RachasEncimaDebajo
 
     # from  rachas_ascendentes_decendentes import RachasAscendentesDescendentes
     # from rachas_encima_debajo import RachasEncimaDebajo
-    # Assuming LongitudRachas is a separate file or within one of the above, if not, it will cause an error
+        # Assuming LongitudRachas is a separate file or within one of the above, if not, it will cause an error
     # For now, I'll comment it out to prevent import errors if it's missing, or assume it's available.
     # from longitud_rachas import LongitudRachas
 except ImportError as e:
